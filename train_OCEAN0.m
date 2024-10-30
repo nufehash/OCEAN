@@ -8,15 +8,15 @@ function [BB,XW,YW,HH] = train_OCEAN0(XTrain_new,YTrain_new,LTrain_new,GTrain_ne
     alpha = param.alpha; 
     beta = param.beta;
     mu= param.mu;
-    %
-
+    omega=param.omega;
     nbits = param.nbits;
     n2 = size(LTrain_new,1);
     c = size(LTrain_new,2);
+    max_iterf = 1;
     %initization
+    kdim = param.nbits/0.05;
     B_new = sign(randn(n2, nbits)); B_new(B_new==0) = -1;
     V_new = randn(n2, nbits);
-
     dX = size(XTrain_new,2);
     dY = size(YTrain_new,2);
     W=randn(c, c);
@@ -30,9 +30,8 @@ function [BB,XW,YW,HH] = train_OCEAN0(XTrain_new,YTrain_new,LTrain_new,GTrain_ne
         Wtemp2=beta*LTrain_new'*(V_new*G)+alpha*LTrain_new'*LTrain_new;
         W=Wtemp1\Wtemp2;
         G=(beta*V_new'*V_new+delta*eye(nbits))\(V_new'*(LTrain_new*W));
-        Z = B_new+beta*LTrain_new*W*G'...
+        Z = omega*B_new+beta*LTrain_new*W*G'...
             +mu*nbits*GTrain_new*(GTrain_new'*B_new);
-        
         Temp = Z'*Z-1/n2*(Z'*ones(n2,1)*(ones(1,n2)*Z));
         [~,Lmd,QQ] = svd(Temp); clear Temp
         idx = (diag(Lmd)>1e-6);
@@ -40,9 +39,8 @@ function [BB,XW,YW,HH] = train_OCEAN0(XTrain_new,YTrain_new,LTrain_new,GTrain_ne
         P = (Z-1/n2*ones(n2,1)*(ones(1,n2)*Z)) *  (Q / (sqrt(Lmd(idx,idx))));
         P_ = orth(randn(n2,nbits-length(find(idx==1))));
         V_new = sqrt(n2)*[P P_]*[Q Q_]';
-        B_new = sign(theta*XTrain_new*P1+theta*YTrain_new*P2+V_new...
+        B_new = sign(theta*XTrain_new*P1+theta*YTrain_new*P2+omega*V_new...
                      +mu*nbits*GTrain_new*(GTrain_new'*V_new));
-       
     end
     
     H1_new = XTrain_new'*B_new;
@@ -52,7 +50,6 @@ function [BB,XW,YW,HH] = train_OCEAN0(XTrain_new,YTrain_new,LTrain_new,GTrain_ne
     H5_new = V_new'*(LTrain_new*W);
     H6_new = GTrain_new'*B_new;
     H7_new = GTrain_new'*V_new;
-
     HH{1,1} = H1_new;
     HH{1,2} = H2_new;
     HH{1,3} = H3_new;
@@ -66,7 +63,7 @@ function [BB,XW,YW,HH] = train_OCEAN0(XTrain_new,YTrain_new,LTrain_new,GTrain_ne
     BB{1,1} = B_new;
     
     
-    % 
+    % hash function learning
 %     sel_num = floor(1000/param.nchunks);
 %     if strcmp(param.db_name, 'NUS-WIDE')
 %         sel_num = floor(5000/param.nchunks);
@@ -90,26 +87,20 @@ function [BB,XW,YW,HH] = train_OCEAN0(XTrain_new,YTrain_new,LTrain_new,GTrain_ne
 %     YW = (HH{1,14}+lambda*eye(dY))\(HH{1,12}+HH{1,10}*xi*nbits)...
 %         /(eye(nbits)+HH{1,8}*xi);
 
-
-    %hash function learning
     M1 = zeros(size(B_new));
     M2 = M1;
-    for iter = 1:max_iter
+    for iter = 1:max_iterf
         T1 = B_new + B_new.*M1;
         T2 = B_new + B_new.*M2;
-        
         F1 = (XTrain_new'*XTrain_new+param.xi*eye(size(XTrain_new,2)))    \    (XTrain_new'*T1);
         F2 = (YTrain_new'*YTrain_new+param.xi*eye(size(YTrain_new,2)))    \    (YTrain_new'*T2);
-        
         K1 = XTrain_new* F1-B_new;
         K2 = YTrain_new* F2-B_new;
-        
         M1 = max(K1.*B_new,0);
         M2 = max(K2.*B_new,0);
     end
     XW=F1;
     YW=F2;
-    
     H9_new = XTrain_new'*XTrain_new;
     H10_new = YTrain_new'*YTrain_new;
     H11_new = XTrain_new'*T1;
