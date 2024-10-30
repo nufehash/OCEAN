@@ -1,8 +1,12 @@
-function map = mAP(ids, Lbase, Lquery)
+function map = mAP(ids, Lbase, Lquery,R)
 
 nquery = size(ids, 2);
 APx = zeros(nquery, 1);
-R = size(Lbase,1); % Configurable
+
+if ~exist('R','var') || R ==0
+    R = size(Lbase,1); % Configurable
+end
+
 
 for i = 1 : nquery
     label = Lquery(i, :);
