@@ -1,7 +1,7 @@
 function [XKTrain,XKTest]=Kernel_Feature(XTrain,XTest,Anchors)
 %
 % This function used to generate kernel features.
-% [XKTrain,XKTest]=Kernel_Feature(XTrain,XTest,Anchors)锛�
+% [XKTrain,XKTest]=Kernel_Feature(XTrain,XTest,Anchors)
   % Input  
   % XTrain: Training dataset, with size [nX, Xdim], where nX is the number of samples and Xdim is the feature dimension.
   % XTest: Testing dataset, with size [nXT, XTdim], where nXT is the number of samples and XTdim is the feature dimension.
