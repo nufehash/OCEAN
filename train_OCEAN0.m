@@ -1,7 +1,31 @@
 function [BB,XW,YW,HH] = train_OCEAN0(XTrain_new,YTrain_new,LTrain_new,GTrain_new,param)
-    
-    
-    max_iter = param.max_iter;
+% This function initializes and trains the OCEAN model for the first round, 
+% generating hash codes and learning projection matrices for image and text features. 
+% It also saves intermediate results to facilitate efficient updates in subsequent iterations. 
+% This function is crucial for setting up the initial state of the OCEAN algorithm, which can then be refined in subsequent rounds using the train_OCEAN function.
+%
+% [BB,XW,YW,HH] = train_OCEAN0(XTrain_new,YTrain_new,LTrain_new,GTrain_new,param)锛?
+   %  Input   
+   %  XTrain_new: New chunk of image features for training.
+   %  YTrain_new: New chunk of text features for training.
+   %  LTrain_new: New chunk of labels for training.
+   %  GTrain_new: Normalized labels for training.
+   %  param: A structure containing parameters.
+   %  
+   %  Output 
+   %  BB: Learned binary hash codes.
+   %  XW: Learned projection matrix for image features.
+   %  YW: Learned projection matrix for text features.
+   %  HH: A cell array containing intermediate results for efficient updates in subsequent iterations.
+%%
+%%Reference:
+% Online semantic embedding correlation for discrete cross-media hashing. 
+% (Manuscript)
+% Version1.0 -- Jan/2025
+% Contant: Haoyu Hu (982258029@qq.com)
+%%
+% Initialize parameters
+    max_iter = param.max_iter;%% number of iterations
     % parameters
     theta= param.theta;
     delta= param.delta;
@@ -10,11 +34,11 @@ function [BB,XW,YW,HH] = train_OCEAN0(XTrain_new,YTrain_new,LTrain_new,GTrain_ne
     mu= param.mu;
     omega=param.omega;
     nbits = param.nbits;
+% Get dimensions of features
     n2 = size(LTrain_new,1);
     c = size(LTrain_new,2);
     max_iterf = 1;
-    %initization
-    kdim = param.nbits/0.05;
+ % Random initialization
     B_new = sign(randn(n2, nbits)); B_new(B_new==0) = -1;
     V_new = randn(n2, nbits);
     dX = size(XTrain_new,2);
@@ -22,6 +46,7 @@ function [BB,XW,YW,HH] = train_OCEAN0(XTrain_new,YTrain_new,LTrain_new,GTrain_ne
     W=randn(c, c);
     G=(beta*V_new'*V_new+delta*eye(nbits))\(V_new'*(LTrain_new*W));
     
+   %% Iterative optimization
     for i = 1:max_iter
         %fprintf('iteration %3d\n', i);
         P1=(theta*XTrain_new'*XTrain_new+delta*eye(dX))\(theta*XTrain_new'*B_new);
@@ -43,6 +68,7 @@ function [BB,XW,YW,HH] = train_OCEAN0(XTrain_new,YTrain_new,LTrain_new,GTrain_ne
                      +mu*nbits*GTrain_new*(GTrain_new'*V_new));
     end
     
+   %% Save results
     H1_new = XTrain_new'*B_new;
     H2_new = XTrain_new'*XTrain_new;
     H3_new = LTrain_new'*(V_new*G);
@@ -101,6 +127,7 @@ function [BB,XW,YW,HH] = train_OCEAN0(XTrain_new,YTrain_new,LTrain_new,GTrain_ne
     end
     XW=F1;
     YW=F2;
+    %% Save results
     H9_new = XTrain_new'*XTrain_new;
     H10_new = YTrain_new'*YTrain_new;
     H11_new = XTrain_new'*T1;
