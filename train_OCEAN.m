@@ -1,8 +1,32 @@
 function [BB,XW,YW,HH] = train_OCEAN(XTrain_new,YTrain_new,LTrain_new,GTrain_new,BB,HH,param)
-    
-    
+%
+% This function is used to continue training the OCEAN algorithm, building upon the initial training done by train_OCEAN0. 
+% It updates the hash codes and projection matrices for subsequent chunks of data.
+%
+% [BB,XW,YW,HH] = train_OCEAN(XTrain_new,YTrain_new,LTrain_new,GTrain_new,BB,HH,param);
+  % Input   
+  % XTrain_new: New chunk of image features for training.
+  % YTrain_new: New chunk of text features for training.
+  % LTrain_new: New chunk of labels for training.
+  % GTrain_new: Normalized labels for training.
+  % BB: Previously learned binary hash codes.
+  % HH: Previously computed intermediate results.
+  % param: A structure containing parameters.
+  %
+  % Output 
+  % BB: Updated binary hash codes.
+  % XW: Updated projection matrix for image features.
+  % YW: Updated projection matrix for text features.
+  % HH: Updated intermediate results.
+%%
+%%Reference:
+% Online semantic embedding correlation for discrete cross-media hashing. 
+% (Manuscript)
+% Version1.0 -- Jan/2025
+% Contant: Haoyu Hu (982258029@qq.com)
+%%
+%% Initialize parameters
     max_iter = param.max_iter;
-    % parameters
     theta= param.theta;
     delta= param.delta;
     alpha = param.alpha; 
@@ -12,17 +36,18 @@ function [BB,XW,YW,HH] = train_OCEAN(XTrain_new,YTrain_new,LTrain_new,GTrain_new
     n2 = size(LTrain_new,1);
     c = size(LTrain_new,2);
     max_iterf = 1;
-    %initization
+    % Random initialization
     B_new = sign(randn(n2, nbits)); B_new(B_new==0) = -1;
     V_new = randn(n2, nbits);
     dX = size(XTrain_new,2);
     dY = size(YTrain_new,2);
     W=randn(c, c);
     G=(beta*(HH{1,15}+V_new'*V_new)+delta*eye(nbits))\(HH{1,5}+V_new'*(LTrain_new*W));
-    
+    % Iterative optimization
     for i = 1:max_iter
         %fprintf('iteration %3d\n', i);
-     
+        % Based on the optimization results from previous rounds (i.e., HH), 
+        % optimize and update the relevant characters by incorporating data from newly arrived batches.
         P1=(theta*(HH{1,2}+XTrain_new'*XTrain_new)+delta*eye(dX))\(theta*(HH{1,1}+XTrain_new'*B_new));
         P2=(theta*(HH{1,17}+YTrain_new'*YTrain_new)+delta*eye(dY))\(theta*(HH{1,16}+YTrain_new'*B_new));
         Wtemp1=(beta+alpha)*(HH{1,4}+LTrain_new'*LTrain_new)+ delta*eye(c);
@@ -33,7 +58,7 @@ function [BB,XW,YW,HH] = train_OCEAN(XTrain_new,YTrain_new,LTrain_new,GTrain_new
             +mu*nbits*GTrain_new*(HH{1,6}+GTrain_new'*B_new);   
         Temp = Z'*Z-1/n2*(Z'*ones(n2,1)*(ones(1,n2)*Z));
         [~,Lmd,QQ] = svd(Temp); clear Temp
-        idx = (diag(Lmd)>1e-6);
+        idx = (diag(Lmd)>1e-6);     % 1e-6 is a set threshold below which singular values are considered negligible in their contribution to the data.
         Q = QQ(:,idx); Q_ = orth(QQ(:,~idx));
         P = (Z-1/n2*ones(n2,1)*(ones(1,n2)*Z)) *  (Q / (sqrt(Lmd(idx,idx))));
         P_ = orth(randn(n2,nbits-length(find(idx==1))));
@@ -41,7 +66,7 @@ function [BB,XW,YW,HH] = train_OCEAN(XTrain_new,YTrain_new,LTrain_new,GTrain_new
         B_new = sign(theta*XTrain_new*P1+theta*YTrain_new*P2+V_new...
                      +mu*nbits*GTrain_new*(HH{1,7}+GTrain_new'*V_new));
     end
-    
+    %% save results
     H1_new = XTrain_new'*B_new;
     H2_new = XTrain_new'*XTrain_new;
     H3_new = LTrain_new'*(V_new*G);
@@ -49,7 +74,7 @@ function [BB,XW,YW,HH] = train_OCEAN(XTrain_new,YTrain_new,LTrain_new,GTrain_new
     H5_new = V_new'*(LTrain_new*W);
     H6_new = GTrain_new'*B_new;
     H7_new = GTrain_new'*V_new;
-
+    % Building on optimization results from previous rounds, iterative updates are made by incorporating data from new rounds.
     HH{1,1} = HH{1,1}+H1_new;
     HH{1,2} = HH{1,2}+H2_new;
     HH{1,3} = HH{1,3}+H3_new;
@@ -102,6 +127,7 @@ function [BB,XW,YW,HH] = train_OCEAN(XTrain_new,YTrain_new,LTrain_new,GTrain_new
          end
          XW=F1;
          YW=F2;
+        %% save results
          H9_new = XTrain_new'*XTrain_new;
          H10_new = YTrain_new'*YTrain_new;
          H11_new = XTrain_new'*T1;
